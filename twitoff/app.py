@@ -1,5 +1,6 @@
-from flask import Flask, render_template
+from flask import Flask, render_template, request
 from .db_model import db, User
+from .twitter import add_user_twitter_scraper
 
 def create_app():
     '''Create and configure an instance of the Flask application'''
@@ -13,4 +14,18 @@ def create_app():
     def root():
         return render_template('base.html', title='Home', users=User.query.all())
 
-    return app   
+    @app.route('/user', methods=['POST'])
+    @app.route('/user/<name>', methods=['GET'])
+    def user(name=None, message=''):
+        name = name or request.values['user_name']
+        try:
+            if request.method == 'POST':
+                add_user_twitter_scraper(name)
+                message = "User {} successfully added!".format(name)
+            tweet = User.query.filter(User.username == name).one().tweet
+        except Exception as e:
+            message = "Error adding {}: {}".format(name, e)
+            tweet = []
+        return render_template('user.html', title=name, tweets=tweet, message=message)
+
+    return app
